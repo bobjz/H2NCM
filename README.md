@@ -22,3 +22,6 @@ run python3 MNODE.py to get results
 ```console
 python3 MNODE.py
 ```
+
+# Plotting Resutls
+Use plotting.ipynb and copy/paste relevant experiment outputs to the data dictionary in the jupyter notebook
