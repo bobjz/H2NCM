@@ -16,8 +16,8 @@ device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu
 print(device)
 
 
-cases=np.load("Final_T1DEXI_CASES.npy")
-ranks=np.load("Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
 
 print(cases.shape)
 print(ranks.shape)
@@ -71,13 +71,13 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                              mlp_size=int(best_param[0]),num_hidden_layers=int(best_param[1]),dropout=best_param[2])
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
-                                             device=device,path=f"results/MNODE_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device,path=f"MNODE_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"results/MNODE_a{alpha}_pred.npy",rmse)
-    np.save(f"results/MNODE_a{alpha}_causal.npy",er)
-    np.save(f"results/MNODE_a{alpha}_best_params.npy",best_param_list)
-    print(f"MNODE_{alpha}_{repeat}_{test_split} RMSE {np.mean(rmse)}")
-    print(f"MNODE_{alpha}_{repeat}_{test_split} Classification Error Rate {np.sort(er)}")
+    np.save(f"MNODE_a{alpha}_pred.npy",rmse)
+    np.save(f"MNODE_a{alpha}_causal.npy",er)
+    np.save(f"MNODE_a{alpha}_best_params.npy",best_param_list)
+    print(f"MNODE_{alpha} RMSE {np.mean(rmse)}")
+    print(f"MNODE_{alpha} Classification Error Rate {np.sort(er)}")
