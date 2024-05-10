@@ -45,7 +45,7 @@ class MNODE_LSTM(nn.Module):
     def forward(self,past,s,x):
         #past is N*L*5
         lstm_out, (h0,_)=self.lstm(past)
-        h0=h0[0]
+        h0=h0[1]
         h0=h0[:,1:]
         hidden=torch.concat([s[:,0],h0],axis=-1)
         pred, hidden = self.dag_rnn_cell(x[:,0],hidden)
