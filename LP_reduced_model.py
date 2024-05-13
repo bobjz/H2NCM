@@ -8,9 +8,12 @@ from torchvision.ops import MLP
 
 
 class DTDSimCell(nn.Module):
-    def __init__(self, mlp_size=16, input_size=4, param_size=28, latent_size=5, **kwargs):
-        super(DTDSimCell, self).__init__(**kwargs)
-        self.mlp=MLP(input_size*2,[mlp_size,mlp_size,param_size])
+    def __init__(self,  input_size=4, param_size=28, mlp_size=16, latent_size=5, num_hidden_layer=2):
+        super(DTDSimCell, self).__init__()
+        mlp_struct=[mlp_size]*num_hidden_layer
+        mlp_struct.append(param_size)
+        self.mlp2=MLP(latent_size,mlp_struct,\
+                     activation_layer=nn.ReLU, inplace=None,dropout=0)
         self.B=nn.Parameter(torch.zeros(input_size-2,latent_size))
         self.A=nn.Parameter(torch.zeros(latent_size,latent_size))
     def forward(self,inputs,hidden):
@@ -31,7 +34,7 @@ class DTDSimCell(nn.Module):
         #parameters
         Z=hidden[0]
         new_Z=torch.matmul(Z,self.A)+torch.matmul(other,self.B)
-        K=torch.abs(self.mlp(new_Z))
+        K=torch.abs(self.mlp2(new_Z))
         
         k1,k2=torch.split(K[:,0:2],1,dim=-1) #glucose params
         m1,m2,m3,m4=torch.split(K[:,2:6],1,dim=-1) #insulin params 
@@ -97,17 +100,22 @@ class DTDSimCell(nn.Module):
         return Gp+DGp, [new_Z,new_S]
     
 class DTD_LSTM(nn.Module):
-    def __init__(self,input_size=4,latent_size=8,\
-                 output_size=1,mlp_size=16):
+    def __init__(self,input_size=4,latent_size=8,state_size=9,\
+                 output_size=1,mlp_size=16,num_hidden_layer=2):
         super(DTD_LSTM, self).__init__()
         self.lstm=nn.LSTM(input_size=input_size+1,\
                   hidden_size=latent_size,\
+                  num_layers=2,\
                   batch_first=True)
-        self.dtdcell=DTDSimCell(mlp_size=mlp_size,latent_size=latent_size)
-    def forward(self,c,past,s,x):
+        mlp_struct=[mlp_size]*num_hidden_layer
+        mlp_struct.append(state_size-1)
+        self.mlp1 = MLP(latent_size,mlp_struct,\
+                     activation_layer=nn.ReLU, inplace=None,dropout=0)
+        self.dtdcell=DTDSimCell(mlp_size=mlp_size,latent_size=latent_size,num_hidden_layer=num_hidden_layer)
+    def forward(self,past,s,x):
         #past is N*L*5
         lstm_out, (h0,c0)=self.lstm(past)
-        hidden=[c0[0],torch.concat([s[:,0],h0[0]],axis=-1)]
+        hidden=[c0[1],torch.concat([s[:,0],self.mlp1(h0[1])],axis=-1)]
         pred, hidden = self.dtdcell(x[:,0],hidden)
         pred = torch.unsqueeze(pred,axis=1)
         for j in range(1,x.shape[1]):

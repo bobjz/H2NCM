@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from torchvision.ops import MLP
-from LP_model import *
+from LP_reduced_model import *
 from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
@@ -52,7 +52,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
                 for val_split in range(3):
                     torch.manual_seed(2023)
                     train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=64)
-                    model=model=DTD_LSTM(latent_size=int(params[2]),mlp_size=int(params[1]),num_hidden_layer=int(params[0]))
+                    model=DTD_LSTM(latent_size=int(params[2]),mlp_size=int(params[1]),num_hidden_layer=int(params[0]))
                     #total_params = sum(p.numel() for p in model.parameters())
                     #print(total_params)
                     train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,device=device)
@@ -63,16 +63,15 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             best_param_list.append(best_param)
             torch.manual_seed(2023)
             train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
-            model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
-                             mlp_size=int(best_param[0]),num_hidden_layers=int(best_param[1]),dropout=best_param[2])
+            model=DTD_LSTM(latent_size=int(best_param[2]),mlp_size=int(best_param[1]),num_hidden_layer=int(best_param[0]))
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
-                                             device=device,path=f"MNODE_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device,path=f"LP_reduced_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"MNODE_a{alpha}_pred.npy",rmse)
-    np.save(f"MNODE_a{alpha}_causal.npy",er)
-    np.save(f"MNODE_a{alpha}_best_params.npy",best_param_list)
-    print(f"MNODE_{alpha} RMSE {np.mean(rmse)}")
-    print(f"MNODE_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"LP_reduced_a{alpha}_pred.npy",rmse)
+    np.save(f"LP_reduced_a{alpha}_causal.npy",er)
+    np.save(f"LP_reduced_a{alpha}_best_params.npy",best_param_list)
+    print(f"LP_reduced_{alpha} RMSE {np.mean(rmse)}")
+    print(f"LP_reduced_{alpha} Classification Error Rate {np.sort(er)}")
