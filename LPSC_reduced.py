@@ -34,7 +34,7 @@ for i in range(repeats):
 closure_input_sizes=[2,2,2,3,2,2,2,4,2]
 beta=1e4
 #tune hyperparam
-for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
+for alpha in [0]:
     rmse=[]
     er=[]
     best_param_list=[]

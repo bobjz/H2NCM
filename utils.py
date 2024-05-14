@@ -143,3 +143,106 @@ def train_model(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=F
                 test_losses.append([loss1.item(),round(torch.sum(torch.abs(pred_rank2-rank)).item()/2/len(rank),3)])
                 
     return train_losses, val_losses, test_losses
+
+def train_trans(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=False, path=None):
+    #train/validate model with train and val, save to path
+    if (device):
+        model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn1=nn.MSELoss()
+    loss_fn2=nn.CrossEntropyLoss()
+    train_losses=[]
+    val_losses=[]
+    test_losses=[]
+    best_val=1e7
+    for epoch in range(epochs):
+        model.train()
+        train_loss1=0
+        train_loss2=0
+        for batch, (past,y0,x,y,rank) in enumerate(train):
+            if device:
+                past=past.to(device)
+                y0=y0.to(device)
+                x=x.to(device)
+                y=y.to(device)
+                rank=rank.to(device)
+            preds=[]
+            causal_mask=nn.Transformer.generate_square_subsequent_mask(x.shape[-2],device=device)
+            for i in range(4):
+                src_x=nn.functional.pad(x[:,i],(1,0),'constant',0)
+                src_x[:,0:1,0:1]=y0[:,i]
+                src=torch.concat([past[:,i],src_x],dim=1)
+                tgt=torch.concat([y0[:,i],y[:,i,:-1]],dim=1)
+                preds.append(model(src,tgt,causal_mask))
+            rank_bg=torch.concat([torch.mean(pred[:,:,0],dim=-1,keepdim=True) for pred in preds[1:]],dim=-1)
+            pred_rank=nn.functional.softmax(rank_bg*beta,dim=-1)
+            loss1 = loss_fn1(preds[0], y[:,0])
+            loss2 = loss_fn2(torch.log(pred_rank+1e-7),rank)
+            loss = (1-alpha)*loss1+alpha*loss2   
+            loss.backward(retain_graph=True)
+            optimizer.step()
+            optimizer.zero_grad()
+            train_loss1+=loss1.item()*len(rank)
+            train_loss2+=loss2.item()*len(rank)
+        train_size=len(train.dataset)
+        train_losses.append([train_loss1/train_size,train_loss2/train_size])
+
+        model.eval()
+        with torch.no_grad():
+
+            for batch, (past,y0,x,y,rank) in enumerate(val):
+                if device:
+                    past=past.to(device)
+                    y0=y0.to(device)
+                    x=x.to(device)
+                    y=y.to(device)
+                    rank=rank.to(device)
+                preds=[]
+                for i in range(4):
+                    src_x=nn.functional.pad(x[:,i],(1,0),'constant',0)
+                    src_x[:,0:1,0:1]=y0[:,i]
+                    src=torch.concat([past[:,i],src_x],dim=1)
+                    tgt=torch.concat([y0[:,i],y[:,i,:-1]*0],dim=1)
+                    prediction=model(src,tgt)
+                    for j in range(1,x.shape[-2]):
+                        tgt[:,j]=prediction[:,j-1]
+                        prediction=model(src,tgt)
+                    preds.append(prediction)
+                rank_bg=torch.concat([torch.mean(pred[:,:,0],dim=-1,keepdim=True) for pred in preds[1:]],dim=-1)
+                pred_rank=nn.functional.softmax(rank_bg*beta,dim=-1)
+                loss1 = loss_fn1(preds[0], y[:,0])
+                loss2 = loss_fn2(torch.log(pred_rank+1e-7),rank)
+                loss_val = (1-alpha)*loss1+alpha*loss2  
+                valid_loss = loss_val.item()
+                val_losses.append(valid_loss)
+                if valid_loss<best_val and path:
+                    best_val=valid_loss
+                    torch.save(model.state_dict(),path)
+                if verbose:
+                    print(f"validation loss at epoch {epoch} pred {loss1.item()} causal {loss2.item()}")
+
+            for batch, (past,y0,x,y,rank) in enumerate(test):
+                if device:
+                    past=past.to(device)
+                    y0=y0.to(device)
+                    x=x.to(device)
+                    y=y.to(device)
+                    rank=rank.to(device)
+                preds=[]
+                for i in range(4):
+                    src_x=nn.functional.pad(x[:,i],(1,0),'constant',0)
+                    src_x[:,0:1,0:1]=y0[:,i]
+                    src=torch.concat([past[:,i],src_x],dim=1)
+                    tgt=torch.concat([y0[:,i],y[:,i,:-1]*0],dim=1)
+                    prediction=model(src,tgt)
+                    for j in range(1,x.shape[-2]):
+                        tgt[:,j]=prediction[:,j-1]
+                        prediction=model(src,tgt)
+                    preds.append(prediction)
+                rank_bg=torch.concat([torch.mean(pred[:,:,0],dim=-1,keepdim=True) for pred in preds[1:]],dim=-1)
+                pred_rank=nn.functional.softmax(rank_bg*beta,dim=-1)
+                pred_rank2=nn.functional.softmax(rank_bg*1e7,dim=-1)
+                loss1 = loss_fn1(preds[0], y[:,0])
+                test_losses.append([loss1.item(),round(torch.sum(torch.abs(pred_rank2-rank)).item()/2/len(rank),3)])
+                
+    return train_losses, val_losses, test_losses

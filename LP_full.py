@@ -34,7 +34,7 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
+for alpha in [1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
