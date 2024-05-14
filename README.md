@@ -10,7 +10,7 @@ conda activate my_env
 ```
 Install the following packages with pip:
 ```console
-pip install numpy torch torchvision
+pip install numpy torch torchvision einops opt_einsum
 ```
 
 # Run experiments for MNODE
