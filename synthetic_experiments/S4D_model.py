@@ -114,7 +114,7 @@ class S4D(nn.Module):
         return y # Return a dummy state to satisfy this repo's interface, but this can be modified
     
 class S4D_wrapper(nn.Module):
-    def __init__(self,d_model,d_state,dropout,feature_size=5,window=6,input_size=5):
+    def __init__(self,d_model,d_state,dropout,feature_size=5,window=10,input_size=3):
         super().__init__()
         self.s4d=S4D(d_model=d_model,d_state=d_state,dropout=dropout)
         self.linear1=nn.Linear(input_size,d_model)

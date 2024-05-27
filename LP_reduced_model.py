@@ -36,6 +36,7 @@ class DTDSimCell(nn.Module):
         new_Z=torch.matmul(Z,self.A)+torch.matmul(other,self.B)
         K=torch.abs(self.mlp2(new_Z))
         
+        
         k1,k2=torch.split(K[:,0:2],1,dim=-1) #glucose params
         m1,m2,m3,m4=torch.split(K[:,2:6],1,dim=-1) #insulin params 
         kgri,D,kmin,kmax,kabs,alpha,beta,b,c,D,BW,f=torch.split(K[:,6:18],1,dim=-1) #ra params
@@ -115,7 +116,7 @@ class DTD_LSTM(nn.Module):
     def forward(self,past,s,x):
         #past is N*L*5
         lstm_out, (h0,c0)=self.lstm(past)
-        hidden=[c0[1],torch.concat([s[:,0],self.mlp1(h0[1])],axis=-1)]
+        hidden=[c0[0],torch.concat([s[:,0],self.mlp1(h0[0])],axis=-1)]
         pred, hidden = self.dtdcell(x[:,0],hidden)
         pred = torch.unsqueeze(pred,axis=1)
         for j in range(1,x.shape[1]):

@@ -11,7 +11,7 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=6
+GPU_ID=5
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
@@ -34,16 +34,16 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [1e-3,1e-2,1e-1,1]:
+for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
     for repeat in range(3):
         for test_split in range(6):
             num_hidden_layers=[2,3,4]
-            mlp_size=[16,24,32]
+            mlp_size=[16,32,48]
             latent_size=[8,12,16]
-            hyper_params=[mlp_size,num_hidden_layers,latent_size]
+            hyper_params=[num_hidden_layers,mlp_size,latent_size]
             list_params=np.array(list(itertools.product(*hyper_params)))
             scores=np.zeros(list_params.shape[0])
             for i in range(len(list_params)):
@@ -65,7 +65,7 @@ for alpha in [1e-3,1e-2,1e-1,1]:
             train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
             model=DTD_LSTM(latent_size=int(best_param[2]),mlp_size=int(best_param[1]),num_hidden_layer=int(best_param[0]))
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
-                                             device=device,path=f"LP_reduced_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device, verbose=True, path=f"LP_reduced_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])

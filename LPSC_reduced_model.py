@@ -126,15 +126,15 @@ class LPSC_LSTM(nn.Module):
                      activation_layer=nn.ReLU, inplace=None,dropout=0)
         self.dtdcell=LPSC_Cell(closre_input_sizes,mlp_size=mlp_size,latent_size=latent_size,num_hidden_layer=num_hidden_layer,state_size=state_size)
     def turn_on_closure(self):
-        
-        
+        for (i,param) in enumerate(self.lstm.parameters()):
+            param.requires_grad = False
         for (i,param) in enumerate(self.mlp1.parameters()):
             param.requires_grad = False
         self.dtdcell.turn_on_closure()
     def forward(self,past,s,x):
         #past is N*L*5
         lstm_out, (h0,c0)=self.lstm(past)
-        hidden=[c0[1],torch.concat([s[:,0],self.mlp1(h0[1])],axis=-1)]
+        hidden=[c0[0],torch.concat([s[:,0],self.mlp1(h0[0])],axis=-1)]
         pred, hidden = self.dtdcell(x[:,0],hidden)
         pred = torch.unsqueeze(pred,axis=1)
         for j in range(1,x.shape[1]):

@@ -7,15 +7,12 @@ from torchvision import transforms, utils
 from torchvision.ops import MLP
 
 
-class DTDSimCell(nn.Module):
-    def __init__(self,  input_size=4, param_size=53, mlp_size=16, latent_size=8, num_hidden_layer=2):
-        super(DTDSimCell, self).__init__()
-        mlp_struct=[mlp_size]*num_hidden_layer
-        mlp_struct.append(param_size)
-        self.mlp2=MLP(latent_size,mlp_struct,\
-                     activation_layer=nn.ReLU, inplace=None,dropout=0)
-        self.B=nn.Parameter(torch.zeros(input_size-2,latent_size))
-        self.A=nn.Parameter(torch.zeros(latent_size,latent_size))
+class UVASimCell(nn.Module):
+    def __init__(self,  input_size=4, param_size=53):
+        super(UVASimCell, self).__init__()
+       
+        self.K=nn.Parameter(torch.randn(param_size))
+        
     def forward(self,inputs,hidden):
         #basal_insulin_data,bolus_c_data,bolus_t_data,\
         #intake_c_data,intake_t_data,\
@@ -24,27 +21,25 @@ class DTDSimCell(nn.Module):
         other=inputs[:,2:]
         
         #dynamical states
-        S=hidden[1]
+        S=hidden[0]
         Gp,Gt,Gs,DGp=torch.split(S[:,:4],1,dim=-1) #glucose states
         Ip,Il,DIp,Isc1,Isc2=torch.split(S[:,4:9],1,dim=-1) #insulin states
         X,XL,XH,Ir=torch.split(S[:,9:13],1,dim=-1) #intermediary states
         Qsto1,Qsto2,Qgut=torch.split(S[:,13:16],1,dim=-1) #meal absorption states
-        H,SRSH,Hsc1,Hsc2=torch.split(S[:,16:],1,dim=-1) #glucagon states
+        H,SRSH,Hsc1,Hsc2=torch.split(S[:,16:20],1,dim=-1) #glucagon states
         
         
         #parameters
-        Z=hidden[0]
-        new_Z=torch.matmul(Z,self.A)+torch.matmul(other,self.B)
-        K=torch.abs(self.mlp2(new_Z))
         
-        k1,k2,VG=torch.split(K[:,0:3],1,dim=-1) #glucose params
-        m1,m2,m3,m4,Vl=torch.split(K[:,3:8],1,dim=-1) #insulin params 
-        kgri,D,kmin,kmax,kabs,alpha,beta,b,c,D,BW,f=torch.split(K[:,8:20],1,dim=-1) #ra params
-        kp1,kp2,kp3,xi,ki,kH,Hb=torch.split(K[:,20:27],1,dim=-1) #EGP params
-        Uii,Vm0,Vmx,Km0,r1,r2,p2u,Ib=torch.split(K[:,27:35],1,dim=-1) # U params
-        ke1,ke2=torch.split(K[:,35:37],1,dim=-1) #E params
-        ka1,ka2,kd,Ts=torch.split(K[:,37:41],1,dim=-1) #sub insulin/glucose params
-        n,delta,rho,sig1,sig2,srbh,kh1,kh2,kh3,SRBH,Gb,Gth=torch.split(K[:,41:],1,dim=-1) #glucagon params
+        K=torch.abs(self.K)
+        k1,k2,VG=torch.split(K[0:3],1,dim=-1) #glucose params
+        m1,m2,m3,m4,Vl=torch.split(K[3:8],1,dim=-1) #insulin params 
+        kgri,D,kmin,kmax,kabs,alpha,beta,b,c,D,BW,f=torch.split(K[8:20],1,dim=-1) #ra params
+        kp1,kp2,kp3,xi,ki,kH,Hb=torch.split(K[20:27],1,dim=-1) #EGP params
+        Uii,Vm0,Vmx,Km0,r1,r2,p2u,Ib=torch.split(K[27:35],1,dim=-1) # U params
+        ke1,ke2=torch.split(K[35:37],1,dim=-1) #E params
+        ka1,ka2,kd,Ts=torch.split(K[37:41],1,dim=-1) #sub insulin/glucose params
+        n,delta,rho,sig1,sig2,srbh,kh1,kh2,kh3,SRBH,Gb,Gth=torch.split(K[41:],1,dim=-1) #glucagon params
         
         #constants and convinence states
         G=Gp/VG;I=Ip/Vl
@@ -117,29 +112,25 @@ class DTDSimCell(nn.Module):
                         Qsto1+DQsto1, Qsto2+DQsto2, Qgut+DQgut,\
                         H+DH, SRSH+DSRSH, Hsc1+DHsc1, Hsc2+DHsc2],axis=-1)
         
-        return Gs+DGs, [new_Z,new_S]
+        return Gs+DGs, [new_S]
     
-class DTD_LSTM(nn.Module):
-    def __init__(self,input_size=4,latent_size=8,state_size=20,\
-                 output_size=1,mlp_size=16,num_hidden_layer=2):
-        super(DTD_LSTM, self).__init__()
+class UVA_LSTM(nn.Module):
+    def __init__(self,input_size=4,latent_size=21,state_size=21,\
+                 output_size=1):
+        super(UVA_LSTM, self).__init__()
         self.lstm=nn.LSTM(input_size=input_size+1,\
                   hidden_size=latent_size,\
                   num_layers=2,\
                   batch_first=True)
-        mlp_struct=[mlp_size]*num_hidden_layer
-        mlp_struct.append(state_size-1)
-        self.mlp1 = MLP(latent_size,mlp_struct,\
-                     activation_layer=nn.ReLU, inplace=None,dropout=0)
-        self.dtdcell=DTDSimCell(mlp_size=mlp_size,latent_size=latent_size,num_hidden_layer=num_hidden_layer)
+        self.uvacell=UVASimCell()
     def forward(self,past,s,x):
         #past is N*L*5
         lstm_out, (h0,c0)=self.lstm(past)
-        hidden=[c0[0],torch.concat([s[:,0],self.mlp1(h0[0])],axis=-1)]
-        pred, hidden = self.dtdcell(x[:,0],hidden)
+        hidden=[torch.concat([s[:,0],h0[1]],axis=-1)]
+        pred, hidden = self.uvacell(x[:,0],hidden)
         pred = torch.unsqueeze(pred,axis=1)
         for j in range(1,x.shape[1]):
-            new_pred, hidden = self.dtdcell(x[:,j],hidden)
+            new_pred, hidden = self.uvacell(x[:,j],hidden)
             new_pred = torch.unsqueeze(new_pred,axis=1)
             pred = torch.concat([pred,new_pred],axis=1)
         return pred

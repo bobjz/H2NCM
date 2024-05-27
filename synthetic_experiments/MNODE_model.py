@@ -33,7 +33,7 @@ class DAG_RNN(nn.Module):
     
     
 class MNODE_LSTM(nn.Module):
-    def __init__(self,DAG,input_size=4,latent_size=5,output_ind=0,\
+    def __init__(self,DAG,input_size=2,latent_size=5,output_ind=0,\
                  mlp_size=32,num_hidden_layers=2,activation=nn.ReLU,dropout=0):
         super(MNODE_LSTM, self).__init__()
         self.lstm=nn.LSTM(input_size=input_size+1,\
