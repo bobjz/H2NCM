@@ -39,7 +39,7 @@ for alpha in [1e-3,1e-2]:
             num_enc=[2,3]
             num_dec=[2,3]
             dim_ffd=[32,64]
-            dropout=[0.1,0.2]
+            dropout=[0,0.1,0.2]
             hyper_params=[d_model,num_enc,num_dec,dim_ffd,dropout]
             list_params=np.array(list(itertools.product(*hyper_params)))
             scores=np.zeros(list_params.shape[0])

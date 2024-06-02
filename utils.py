@@ -66,6 +66,7 @@ def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size
              train_intervention=None, test_intervention=None, corruption=0):
 #split and form data loarder
 #This function is for additional experiments that involve modifications of the interventions sets
+    
 
     perm=perms[rep]
     cases_s=cases[perm]
@@ -76,6 +77,35 @@ def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size
     cv_cases=np.concatenate([cases_s[0:outer_fold*ts],cases_s[(outer_fold+1)*ts:]],axis=0)
     cv_ranks=np.concatenate([ranks_s[0:outer_fold*ts],ranks_s[(outer_fold+1)*ts:]],axis=0)
     
+    #modeify interventions
+    if train_intervention=="insulin_carb":
+        for i in range(len(cv_cases)):
+            for j in range(1,4):
+                cv_cases[i,j]=cv_cases[i,0]
+            rng=np.random.default_rng(2024)
+            roll=rng.random()
+            if roll<0.5:
+                cv_cases[i,2,-7:,1]+=2.5
+                cv_cases[i,3,-7:,1]+=5.0
+                cv_ranks[i]=[1,0,0]
+            else:
+                cv_cases[i,2,-7,2]+=50.0
+                cv_cases[i,3,-7,2]+=100.0
+                cv_ranks[i]=[0,0,1]
+    if test_intervention=="ins_carb_ratio":
+        for i in range(len(test_cases)):
+            for j in range(1,4):
+                test_cases[i,j]=test_cases[i,0]
+            test_cases[i,1,-7,1]+=2.25
+            test_cases[i,2,-7,1]+=3.00
+            test_cases[i,3,-7,1]+=4.50
+            test_cases[i,1:,-7,2]+=45
+    #apply corruption
+    for i in range(len(cv_ranks)):
+        rng=np.random.default_rng(2024)
+        roll=rng.random()
+        if roll<corruprion:
+            cv_ranks[i]=np.roll(cv_ranks[i],1)
     val_cases=cv_cases[inner_fold*vs:(inner_fold+1)*vs]
     val_ranks=cv_ranks[inner_fold*vs:(inner_fold+1)*vs]
     train_cases=np.concatenate([cv_cases[0:inner_fold*vs],cv_cases[(inner_fold+1)*vs:]],axis=0)
@@ -127,7 +157,9 @@ def train_model(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=F
             pred_rank=nn.functional.softmax(rank_bg*beta,dim=-1)
             loss1 = loss_fn1(preds[0], y[:,0])
             loss2 = loss_fn2(torch.log(pred_rank+1e-7),rank)
-            loss = (1-alpha)*loss1+alpha*loss2   
+            loss = (1-alpha)*loss1+alpha*loss2
+            if verbose:
+                print(f"training loss 1 {loss1.item()} loss 2 {loss2.item()}")
             loss.backward(retain_graph=True)
             optimizer.step()
             optimizer.zero_grad()

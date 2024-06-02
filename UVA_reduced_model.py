@@ -11,7 +11,7 @@ class UVASimCell(nn.Module):
     def __init__(self,  input_size=4, param_size=28):
         super(UVASimCell, self).__init__()
        
-        self.K=nn.Parameter(torch.randn(param_size))
+        self.K=nn.Parameter(torch.randn(param_size)/100)
         
     def forward(self,inputs,hidden):
         #basal_insulin_data,bolus_c_data,bolus_t_data,\
@@ -40,9 +40,9 @@ class UVASimCell(nn.Module):
         EGP=kp1-kp2*Gp-kp3*XL#+xi*XH
         #Ra system
         Qsto=Qsto1+Qsto2        
-        kemptQ=kmin+(kmax-kmin/2)*(\
+        kemptQ=torch.abs(kmin+(kmax-kmin/2)*(\
                torch.tanh(alpha*(Qsto-b*D))-\
-               torch.tanh(beta*(Qsto-c*D))+2)
+               torch.tanh(beta*(Qsto-c*D))+2))
         Ra=f*kabs*Qgut/BW
         
         #Utilization system
@@ -74,7 +74,7 @@ class UVASimCell(nn.Module):
         return Gp+DGp, [new_S]
     
 class UVA_LSTM(nn.Module):
-    def __init__(self,input_size=4,latent_size=9,state_size=9,\
+    def __init__(self,input_size=4,latent_size=10,\
                  output_size=1):
         super(UVA_LSTM, self).__init__()
         self.lstm=nn.LSTM(input_size=input_size+1,\

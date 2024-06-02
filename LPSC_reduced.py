@@ -11,7 +11,7 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=9
+GPU_ID=5
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
@@ -34,7 +34,7 @@ for i in range(repeats):
 closure_input_sizes=[2,2,2,3,2,2,2,4,2]
 beta=1e4
 #tune hyperparam
-for alpha in [1e-2,1e-1,1]:
+for alpha in [0,1e-4]:
     rmse=[]
     er=[]
     best_param_list=[]

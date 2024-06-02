@@ -11,13 +11,13 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=8
+GPU_ID=2
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
-cases=np.float64(np.load("synthetic_cases.npy"))
-ranks=np.float64(np.load("synthetic_ranks.npy"))
 
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
 print(cases.shape)
 print(ranks.shape)
 
@@ -31,15 +31,15 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [5e-3,1e-2]:
+for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(2):
-        for test_split in range(5):
-            num_hidden_layers=[2,3]
-            mlp_size=[16,32]
-            latent_size=[2,4]
+    for repeat in range(3):
+        for test_split in range(6):
+            num_hidden_layers=[2,3,4]
+            mlp_size=[16,32,48]
+            latent_size=[8,12,16]
             hyper_params=[num_hidden_layers,mlp_size,latent_size]
             list_params=np.array(list(itertools.product(*hyper_params)))
             scores=np.zeros(list_params.shape[0])
@@ -48,21 +48,23 @@ for alpha in [5e-3,1e-2]:
                 params=list_params[i]
                 for val_split in range(3):
                     torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=64)
+                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,\
+                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
                     model=DTD_LSTM(latent_size=int(params[2]),mlp_size=int(params[1]),num_hidden_layer=int(params[0]))
                     #total_params = sum(p.numel() for p in model.parameters())
                     #print(total_params)
-                    train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=50,lr=10*1e-3,device=device)
+                    train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,device=device)
                     scores[i]+=np.min(val_h)/3
 
             best_param=list_params[np.argmin(scores)]
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,\
+                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
             model=DTD_LSTM(latent_size=int(best_param[2]),mlp_size=int(best_param[1]),num_hidden_layer=int(best_param[0]))
-            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=50,lr=10*1e-3,\
-                                             device=device,path=f"LP_{alpha}_{repeat}_{test_split}.pth")
+            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
+                                             device=device, verbose=True, path=f"LP_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])

@@ -11,7 +11,7 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=4
+GPU_ID=9
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
@@ -43,7 +43,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             torch.manual_seed(2023)
             train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
             model=UVA_LSTM()
-            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=1*1e-2,\
+            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=6*1e-2,\
                                              device=device,path=f"UVA__reduced_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))

@@ -30,7 +30,7 @@ class FormDataset(Dataset):
         return sample
     
 
-def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=200,vs=200,batch_size=16):
+def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16):
 #split and form data loarder
     perm=perms[rep]
     cases_s=cases[perm]
@@ -52,14 +52,54 @@ def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=200,vs=200,batch_siz
     val_cases=np.divide(val_cases-train_mean,train_std)
     test_cases=np.divide(test_cases-train_mean,train_std)
     
-    train=DataLoader(FormDataset(train_cases,train_ranks,window=10),\
+    train=DataLoader(FormDataset(train_cases,train_ranks),\
                                    batch_size=batch_size)
-    val=DataLoader(FormDataset(val_cases,val_ranks,window=10),\
+    val=DataLoader(FormDataset(val_cases,val_ranks),\
                                    batch_size=len(val_ranks))
-    test=DataLoader(FormDataset(test_cases,test_ranks,window=10),\
+    test=DataLoader(FormDataset(test_cases,test_ranks),\
                                    batch_size=len(test_ranks))
 
     return train,val,test,train_mean,train_std
+
+
+def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16,\
+             train_intervention=None, test_intervention=None, corruption=0):
+#split and form data loarder
+#This function is for additional experiments that involve modifications of the interventions sets
+    
+    rng=np.random.default_rng(2024)
+    perm=perms[rep]
+    cases_s=cases[perm]
+    ranks_s=ranks[perm]
+    
+    test_cases=cases_s[outer_fold*ts:(outer_fold+1)*ts]
+    test_ranks=ranks_s[outer_fold*ts:(outer_fold+1)*ts]
+    cv_cases=np.concatenate([cases_s[0:outer_fold*ts],cases_s[(outer_fold+1)*ts:]],axis=0)
+    cv_ranks=np.concatenate([ranks_s[0:outer_fold*ts],ranks_s[(outer_fold+1)*ts:]],axis=0)
+    for i in range(len(cv_ranks)):
+        roll=rng.random()
+        if roll<corruption:
+            cv_ranks[i]=np.roll(cv_ranks[i],1)
+    val_cases=cv_cases[inner_fold*vs:(inner_fold+1)*vs]
+    val_ranks=cv_ranks[inner_fold*vs:(inner_fold+1)*vs]
+    train_cases=np.concatenate([cv_cases[0:inner_fold*vs],cv_cases[(inner_fold+1)*vs:]],axis=0)
+    train_ranks=np.concatenate([cv_ranks[0:inner_fold*vs],cv_ranks[(inner_fold+1)*vs:]],axis=0)
+    
+    train_mean=np.mean(train_cases[:,0],axis=(0,1))
+    train_std=np.std(train_cases[:,0],axis=(0,1))
+    train_cases=np.divide(train_cases-train_mean,train_std)
+    val_cases=np.divide(val_cases-train_mean,train_std)
+    test_cases=np.divide(test_cases-train_mean,train_std)
+    
+    train=DataLoader(FormDataset(train_cases,train_ranks),\
+                                   batch_size=batch_size)
+    val=DataLoader(FormDataset(val_cases,val_ranks),\
+                                   batch_size=len(val_ranks))
+    test=DataLoader(FormDataset(test_cases,test_ranks),\
+                                   batch_size=len(test_ranks))
+
+    return train,val,test,train_mean,train_std
+
 
 
 def train_model(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=False, path=None):
@@ -91,9 +131,9 @@ def train_model(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=F
             pred_rank=nn.functional.softmax(rank_bg*beta,dim=-1)
             loss1 = loss_fn1(preds[0], y[:,0])
             loss2 = loss_fn2(torch.log(pred_rank+1e-7),rank)
+            loss = (1-alpha)*loss1+alpha*loss2
             if verbose:
                 print(f"training loss 1 {loss1.item()} loss 2 {loss2.item()}")
-            loss = (1-alpha)*loss1+alpha*loss2   
             loss.backward(retain_graph=True)
             optimizer.step()
             optimizer.zero_grad()
