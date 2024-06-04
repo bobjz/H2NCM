@@ -34,7 +34,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(2):
+    for repeat in range(3):
         for test_split in range(5):
             num_layers=[2,3]
             conv_size=[16,32]
