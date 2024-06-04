@@ -16,8 +16,8 @@ device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu
 print(device)
 
 
-cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
 print(cases.shape)
 print(ranks.shape)
@@ -36,11 +36,12 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(3):
+    for repeat in range(1): #change to 3 for alpha=1
         for test_split in range(6):
+            seed=2023+repeat
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,\
-                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=72,\
+                                                                 train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
             model=UVA_LSTM()
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=1*1e-2,\
                                              device=device,path=f"UVA_{alpha}_{repeat}_{test_split}.pth")
