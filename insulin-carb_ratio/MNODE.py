@@ -16,8 +16,8 @@ device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu
 print(device)
 
 
-cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
 print(cases.shape)
 print(ranks.shape)
@@ -42,8 +42,9 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(1):
-        for test_split in range(2):
+    for repeat in range(1): #change to 3 for alpha=1
+        for test_split in range(6):
+            seed=2023+repeat
             num_hidden_layers=[2,3]
             mlp_size=[16,24,32]
             dropout=[0]
@@ -53,10 +54,10 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             for i in range(len(list_params)):
                 #tune hyperparams with cv
                 params=list_params[i]
-                for val_split in range(0):
-                    torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,\
-                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
+                for val_split in range(3):
+                    torch.manual_seed(seed)
+                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=72,\
+                                                                 train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
                     model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                                      mlp_size=int(params[0]),num_hidden_layers=int(params[1]),dropout=params[2])
                     #total_params = sum(p.numel() for p in model.parameters())
@@ -67,9 +68,9 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             best_param=list_params[np.argmin(scores)]
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
-            torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,\
-                                                        train_intervention="insulin_carb", test_intervention="inscarb_ratio")
+            torch.manual_seed(seed)
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=72,\
+                                                        train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
             model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                              mlp_size=int(best_param[0]),num_hidden_layers=int(best_param[1]),dropout=best_param[2])
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
