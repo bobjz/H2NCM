@@ -15,8 +15,8 @@ device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu
 print(device)
 
 
-cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
 print(cases.shape)
 print(ranks.shape)
@@ -29,17 +29,18 @@ for i in range(repeats):
     
 beta=1e4
 
-for alpha in [1e-2,1e-1,1]:
+for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(3):
+    for repeat in range(1):#change to 3 for alpha=1
         for test_split in range(6):
-            d_model=[4,8,12]
+            seed=repeat+2023
+            d_model=[4,8]
             num_enc=[2,3]
             num_dec=[2,3]
             dim_ffd=[32,64]
-            dropout=[0.1,0.2]
+            dropout=[0,0.1]
             hyper_params=[d_model,num_enc,num_dec,dim_ffd,dropout]
             list_params=np.array(list(itertools.product(*hyper_params)))
             scores=np.zeros(list_params.shape[0])
@@ -47,9 +48,9 @@ for alpha in [1e-2,1e-1,1]:
                  #tune hyperparams with cv
                 params=list_params[i]
                 for val_split in range(3):
-                    torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,\
-                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
+                    torch.manual_seed(seed)
+                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=72,\
+                                                                 train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
                     model=Transformer(d_model=int(params[0]),num_encoder_layers=int(params[1]),\
                                      num_decoder_layers=int(params[2]), dim_feedforward=int(params[3]), dropout=params[4],device=device)
                     #total_params = sum(p.numel() for p in model.parameters())
@@ -60,9 +61,9 @@ for alpha in [1e-2,1e-1,1]:
             best_param=list_params[np.argmin(scores)]
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
-            torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,\
-                                                                 train_intervention="insulin_carb", test_intervention="inscarb_ratio")
+            torch.manual_seed(seed)
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=72,\
+                                                                 train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
             model=Transformer(d_model=int(best_param[0]),num_encoder_layers=int(best_param[1]),\
                               num_decoder_layers=int(best_param[2]), dim_feedforward=int(best_param[3]),\
                               dropout=best_param[4],device=device)
