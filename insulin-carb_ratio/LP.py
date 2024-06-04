@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from torchvision.ops import MLP
-from LP_reduced_model import *
+from LP_model import *
 from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
