@@ -16,7 +16,7 @@ print(device)
 
 
 cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
-ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
 print(cases.shape)
 print(ranks.shape)
