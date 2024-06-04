@@ -21,7 +21,7 @@ ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("
 print(cases.shape)
 print(ranks.shape)
 
-mod_name="LP_comp2"
+mod_name="LP"
 repeats=3
 rng=np.random.default_rng(seed=2024)
 perms=np.zeros((repeats,cases.shape[0]),dtype='int32')
@@ -31,11 +31,11 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [1]:
+for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(2,3):
+    for repeat in range(1): #change to 3 for alpha=1
         for test_split in range(6):
             seed=2023+repeat
             num_hidden_layers=[2,3,4]
