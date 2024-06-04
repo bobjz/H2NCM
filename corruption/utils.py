@@ -30,7 +30,7 @@ class FormDataset(Dataset):
         return sample
     
 
-def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16):
+def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=23,vs=30,batch_size=16):
 #split and form data loarder
     perm=perms[rep]
     cases_s=cases[perm]
@@ -62,12 +62,12 @@ def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=
     return train,val,test,train_mean,train_std
 
 
-def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16,\
+def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=23,vs=30,batch_size=16,\
              train_intervention=None, test_intervention=None, corruption=0):
 #split and form data loarder
 #This function is for additional experiments that involve modifications of the interventions sets
     
-    rng=np.random.default_rng(2024)
+    rng=np.random.default_rng(rep+outer_fold+inner_fold)
     perm=perms[rep]
     cases_s=cases[perm]
     ranks_s=ranks[perm]
@@ -76,6 +76,31 @@ def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size
     test_ranks=ranks_s[outer_fold*ts:(outer_fold+1)*ts]
     cv_cases=np.concatenate([cases_s[0:outer_fold*ts],cases_s[(outer_fold+1)*ts:]],axis=0)
     cv_ranks=np.concatenate([ranks_s[0:outer_fold*ts],ranks_s[(outer_fold+1)*ts:]],axis=0)
+    
+    #modeify interventions
+    if train_intervention=="insulin_carb":
+        for i in range(len(cv_cases)):
+            for j in range(1,4):
+                cv_cases[i,j]=cv_cases[i,0]
+            roll=rng.random()
+            if roll<0.5:
+                cv_cases[i,2,-7,1]+=2.5/5
+                cv_cases[i,3,-7,1]+=5.0/5
+                cv_ranks[i]=[1,0,0]
+            else:
+                cv_cases[i,2,-7,2]+=50.0*200
+                cv_cases[i,3,-7,2]+=100.0*200
+                cv_ranks[i]=[0,0,1]
+    if test_intervention=="ins_carb_ratio":
+        for i in range(len(test_cases)):
+            for j in range(1,4):
+                test_cases[i,j]=test_cases[i,0]
+            test_cases[i,1,-7,1]+=2.25/5
+            test_cases[i,2,-7,1]+=3.00/5
+            test_cases[i,3,-7,1]+=4.50/5
+            test_cases[i,1:,-7,2]+=45*200
+            test_ranks[i]=[1,0,0]
+    #apply corruption
     for i in range(len(cv_ranks)):
         roll=rng.random()
         if roll<corruption:

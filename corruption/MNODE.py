@@ -38,7 +38,7 @@ dag=[[[0,3,4,5,6],[],[5]],\
      [[6],[1],[2]]]
 beta=1e4
 #tune hyperparam
-for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
+for alpha in [1]:
     rmse=[]
     er=[]
     best_param_list=[]
@@ -55,29 +55,29 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
                 params=list_params[i]
                 for val_split in range(3):
                     torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,corruption=0.15)
+                    train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,corruption=0.20)
                     model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                                      mlp_size=int(params[0]),num_hidden_layers=int(params[1]),dropout=params[2])
                     #total_params = sum(p.numel() for p in model.parameters())
                     #print(total_params)
-                    train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,device=device)
+                    train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,device=device,verbose=False)
                     scores[i]+=np.min(val_h)/3
 
             best_param=list_params[np.argmin(scores)]
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,corruption=0.15)
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=64,corruption=0.20)
             model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                              mlp_size=int(best_param[0]),num_hidden_layers=int(best_param[1]),dropout=best_param[2])
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
-                                             device=device,path=f"MNODE15_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device,path=f"MNODE20_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"MNODE15_a{alpha}_pred.npy",rmse)
-    np.save(f"MNODE15_a{alpha}_causal.npy",er)
-    np.save(f"MNODE15_a{alpha}_best_params.npy",best_param_list)
-    print(f"MNODE15_{alpha} RMSE {np.mean(rmse)}")
-    print(f"MNODE15_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"MNODE20_a{alpha}_pred.npy",rmse)
+    np.save(f"MNODE20_a{alpha}_causal.npy",er)
+    np.save(f"MNODE20_a{alpha}_best_params.npy",best_param_list)
+    print(f"MNODE20_{alpha} RMSE {np.mean(rmse)}")
+    print(f"MNODE20_{alpha} Classification Error Rate {np.sort(er)}")

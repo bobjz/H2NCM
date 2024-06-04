@@ -11,16 +11,14 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=8
+GPU_ID=1
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
 
-#cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-#ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
-cases=np.load("Final_T1DEXI_CASES.npy")
-ranks=np.load("Final_T1DEXI_RANKS.npy")
 print(cases.shape)
 print(ranks.shape)
 
@@ -34,11 +32,11 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [1]:
+for alpha in [1e-2]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(3):
+    for repeat in range(1):
         for test_split in range(6):
             num_hidden_layers=[2,3]
             mlp_size=[16,24,32]
@@ -51,7 +49,7 @@ for alpha in [1]:
                 params=list_params[i]
                 for val_split in range(3):
                     torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=64)
+                    train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=72)
                     model=DTD_LSTM(latent_size=int(params[2]),mlp_size=int(params[1]),num_hidden_layer=int(params[0]))
                     #total_params = sum(p.numel() for p in model.parameters())
                     #print(total_params)
@@ -62,7 +60,7 @@ for alpha in [1]:
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
+            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=72)
             model=DTD_LSTM(latent_size=int(best_param[2]),mlp_size=int(best_param[1]),num_hidden_layer=int(best_param[0]))
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
                                              device=device,path=f"LP_full_{alpha}_{repeat}_{test_split}.pth")

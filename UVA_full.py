@@ -11,16 +11,14 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=3
+GPU_ID=2
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
 
-#cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-#ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
-cases=np.load("Final_T1DEXI_CASES.npy")
-ranks=np.load("Final_T1DEXI_RANKS.npy")
 print(cases.shape)
 print(ranks.shape)
 
@@ -38,19 +36,19 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(3):
+    for repeat in range(1):
         for test_split in range(6):
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
+            train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=72,train_intervention="insulin_carb",test_intervention="ins_carb_ratio")
             model=UVA_LSTM()
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=1*1e-2,\
-                                             device=device,path=f"UVA_full_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device,path=f"UVAOOD_full_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"UVA_full_a{alpha}_pred.npy",rmse)
-    np.save(f"UVA_full_a{alpha}_causal.npy",er)
-    np.save(f"UVA_full_a{alpha}_best_params.npy",best_param_list)
-    print(f"UVA_full_{alpha} RMSE {np.mean(rmse)}")
-    print(f"UVA_full_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"UVAOOD_full_a{alpha}_pred.npy",rmse)
+    np.save(f"UVAOOD_full_a{alpha}_causal.npy",er)
+    np.save(f"UVAOOD_full_a{alpha}_best_params.npy",best_param_list)
+    print(f"UVAOOD_full_{alpha} RMSE {np.mean(rmse)}")
+    print(f"UVAOOD_full_{alpha} Classification Error Rate {np.sort(er)}")

@@ -30,7 +30,7 @@ class FormDataset(Dataset):
         return sample
     
 
-def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16):
+def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=23,vs=30,batch_size=16):
 #split and form data loarder
     perm=perms[rep]
     cases_s=cases[perm]
@@ -62,12 +62,12 @@ def cv_split(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=
     return train,val,test,train_mean,train_std
 
 
-def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size=16,\
+def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=23,vs=30,batch_size=16,\
              train_intervention=None, test_intervention=None, corruption=0):
 #split and form data loarder
 #This function is for additional experiments that involve modifications of the interventions sets
-    rng=np.random.default_rng(2024)
-
+    
+    rng=np.random.default_rng(rep+outer_fold+inner_fold)
     perm=perms[rep]
     cases_s=cases[perm]
     ranks_s=ranks[perm]
@@ -84,29 +84,27 @@ def cv_split2(perms,cases,ranks,rep,outer_fold,inner_fold,ts=12,vs=21,batch_size
                 cv_cases[i,j]=cv_cases[i,0]
             roll=rng.random()
             if roll<0.5:
-                cv_cases[i,2,-7:,1]+=2.5
-                cv_cases[i,3,-7:,1]+=5.0
+                cv_cases[i,2,-7,1]+=2.5/5
+                cv_cases[i,3,-7,1]+=5.0/5
                 cv_ranks[i]=[1,0,0]
             else:
-                cv_cases[i,2,-7,2]+=50.0
-                cv_cases[i,3,-7,2]+=100.0
+                cv_cases[i,2,-7,2]+=50.0*200
+                cv_cases[i,3,-7,2]+=100.0*200
                 cv_ranks[i]=[0,0,1]
-    if test_intervention=="inscarb_ratio":
+    if test_intervention=="ins_carb_ratio":
         for i in range(len(test_cases)):
             for j in range(1,4):
                 test_cases[i,j]=test_cases[i,0]
-            test_cases[i,1,-7,1]+=2.25
-            test_cases[i,2,-7,1]+=3.00
-            test_cases[i,3,-7,1]+=4.50
-            test_cases[i,1:,-7,2]+=45
+            test_cases[i,1,-7,1]+=2.25/5
+            test_cases[i,2,-7,1]+=3.00/5
+            test_cases[i,3,-7,1]+=4.50/5
+            test_cases[i,1:,-7,2]+=45*200
             test_ranks[i]=[1,0,0]
     #apply corruption
-    #if corruption>0:
-    #    for i in range(len(cv_ranks)):
-    #        rng=np.random.default_rng(2024)
-    #        roll=rng.random()
-    #        if roll<corruption:
-    #            cv_ranks[i]=np.roll(cv_ranks[i],1)
+    for i in range(len(cv_ranks)):
+        roll=rng.random()
+        if roll<corruption:
+            cv_ranks[i]=np.roll(cv_ranks[i],1)
     val_cases=cv_cases[inner_fold*vs:(inner_fold+1)*vs]
     val_ranks=cv_ranks[inner_fold*vs:(inner_fold+1)*vs]
     train_cases=np.concatenate([cv_cases[0:inner_fold*vs],cv_cases[(inner_fold+1)*vs:]],axis=0)
@@ -210,8 +208,6 @@ def train_model(model,alpha,beta,train,val,test,epochs,lr,device=None, verbose=F
                 pred_rank2=nn.functional.softmax(rank_bg*1e7,dim=-1)
                 loss1 = loss_fn1(preds[0], y[:,0])
                 test_losses.append([loss1.item(),round(torch.sum(torch.abs(pred_rank2-rank)).item()/2/len(rank),3)])
-                if verbose:
-                    print(f"test loss at epoch {epoch} pred {loss1.item()} causal {round(torch.sum(torch.abs(pred_rank2-rank)).item()/2/len(rank),3)}")
                 
     return train_losses, val_losses, test_losses
 

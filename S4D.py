@@ -10,7 +10,7 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=0
+GPU_ID=9
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
@@ -31,7 +31,7 @@ for i in range(repeats):
 
 beta=1e4
 #tune hyperparam
-for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
+for alpha in [0,1e-2,1,1e-4,1e-3,1e-1]:
     rmse=[]
     er=[]
     best_param_list=[]

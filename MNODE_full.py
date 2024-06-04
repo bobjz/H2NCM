@@ -11,13 +11,13 @@ from utils import *
 torch.set_default_dtype(torch.float64)
 device=None
 #comment this out if not using GPU
-GPU_ID=4
+GPU_ID=9
 device = torch.device('cuda:'+str(GPU_ID) if torch.cuda.is_available() else 'cpu')
 print(device)
 
 
-cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_CASES.npy")
-ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/Final_T1DEXI_RANKS.npy")
+cases=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_cases.npy")
+ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("float64")
 
 print(cases.shape)
 print(ranks.shape)
@@ -49,7 +49,7 @@ dag=[[[0,1,8,9,12,13,14,15],[],[8]],\
      [[16,17],[],[2]]]
 beta=1e4
 #tune hyperparam
-for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
+for alpha in [0,1e-4]:
     rmse=[]
     er=[]
     best_param_list=[]
@@ -66,7 +66,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
                 params=list_params[i]
                 for val_split in range(3):
                     torch.manual_seed(2023)
-                    train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=64)
+                    train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,val_split,batch_size=72)
                     model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                                      mlp_size=int(params[0]),num_hidden_layers=int(params[1]),dropout=params[2])
                     #total_params = sum(p.numel() for p in model.parameters())
@@ -78,7 +78,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             print(f"best_param is {best_param}")
             best_param_list.append(best_param)
             torch.manual_seed(2023)
-            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=64)
+            train,val,test,train_mean,train_std=cv_split(perms,cases,ranks,repeat,test_split,3,batch_size=72)
             model=MNODE_LSTM(DAG=dag,latent_size=len(dag),output_ind=0,\
                              mlp_size=int(best_param[0]),num_hidden_layers=int(best_param[1]),dropout=best_param[2])
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\

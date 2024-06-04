@@ -42,8 +42,8 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(3):
-        for test_split in range(6):
+    for repeat in range(1):
+        for test_split in range(2):
             num_hidden_layers=[2,3]
             mlp_size=[16,24,32]
             dropout=[0]
@@ -53,7 +53,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             for i in range(len(list_params)):
                 #tune hyperparams with cv
                 params=list_params[i]
-                for val_split in range(3):
+                for val_split in range(0):
                     torch.manual_seed(2023)
                     train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,val_split,batch_size=64,\
                                                                  train_intervention="insulin_carb", test_intervention="inscarb_ratio")
@@ -77,7 +77,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
-
+    continue
     np.save(f"MNODE_a{alpha}_pred.npy",rmse)
     np.save(f"MNODE_a{alpha}_causal.npy",er)
     np.save(f"MNODE_a{alpha}_best_params.npy",best_param_list)
