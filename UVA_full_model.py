@@ -11,12 +11,10 @@ class UVASimCell(nn.Module):
     def __init__(self,  input_size=4, param_size=53):
         super(UVASimCell, self).__init__()
        
-        self.K=nn.Parameter(torch.randn(param_size))
+        self.K=nn.Parameter(torch.randn(param_size)/20)
         
     def forward(self,inputs,hidden):
-        #basal_insulin_data,bolus_c_data,bolus_t_data,\
-        #intake_c_data,intake_t_data,\
-        #hr_data, hr_d_data, time_start_data, time_end_data
+        #inputs
         insulin=inputs[:,0:1]; carb=inputs[:,1:2]
         other=inputs[:,2:]
         
@@ -27,10 +25,8 @@ class UVASimCell(nn.Module):
         X,XL,XH,Ir=torch.split(S[:,9:13],1,dim=-1) #intermediary states
         Qsto1,Qsto2,Qgut=torch.split(S[:,13:16],1,dim=-1) #meal absorption states
         H,SRSH,Hsc1,Hsc2=torch.split(S[:,16:20],1,dim=-1) #glucagon states
-        
-        
+
         #parameters
-        
         K=torch.abs(self.K)
         k1,k2,VG=torch.split(K[0:3],1,dim=-1) #glucose params
         m1,m2,m3,m4,Vl=torch.split(K[3:8],1,dim=-1) #insulin params 
@@ -43,8 +39,6 @@ class UVASimCell(nn.Module):
         
         #constants and convinence states
         G=Gp/VG;I=Ip/Vl
-        #Gb=0.5
-        #Gth=0.25
         ratio=nn.functional.relu(G/Gb)
         
         
