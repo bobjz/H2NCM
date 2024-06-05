@@ -35,7 +35,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(1): #change to 3 for alpha=1
+    for repeat in range(3): 
         for test_split in range(6):
             seed=2023+repeat
             num_hidden_layers=[2,3,4]
