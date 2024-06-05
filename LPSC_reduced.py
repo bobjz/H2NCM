@@ -21,7 +21,7 @@ ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("
 print(cases.shape)
 print(ranks.shape)
 
-mod_name="LPSC_reduced"
+mod_name="LPSC"
 repeats=3
 rng=np.random.default_rng(seed=2024)
 perms=np.zeros((repeats,cases.shape[0]),dtype='int32')
