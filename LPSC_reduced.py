@@ -21,7 +21,7 @@ ranks=np.load("/dfs/scratch1/bobjz/ICML_paper_data/new_icml_ranks.npy").astype("
 print(cases.shape)
 print(ranks.shape)
 
-
+mod_name="LP_reduced"
 repeats=3
 rng=np.random.default_rng(seed=2024)
 perms=np.zeros((repeats,cases.shape[0]),dtype='int32')
@@ -35,7 +35,7 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(1): #change to 3 for alpha=1
+    for repeat in range(3): 
         for test_split in range(6):
             seed=2023+repeat
             num_hidden_layers=[2,3]
@@ -67,13 +67,13 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,device=device)
             model.turn_on_closure()
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=50,lr=2*1e-3,\
-                                             device=device,path=f"LPSC_reduced_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device,path=f"{mod_name}_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"LPSC_reduced_a{alpha}_pred.npy",rmse)
-    np.save(f"LPSC_reduced_a{alpha}_causal.npy",er)
-    np.save(f"LPSC_reduced_a{alpha}_best_params.npy",best_param_list)
-    print(f"LPSC_reduced_{alpha} RMSE {np.mean(rmse)}")
-    print(f"LPSC_reduced_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"{mod_name}_a{alpha}_pred.npy",rmse)
+    np.save(f"{mod_name}_a{alpha}_causal.npy",er)
+    np.save(f"{mod_name}_reduced_a{alpha}_best_params.npy",best_param_list)
+    print(f"{mod_name}_reduced_{alpha} RMSE {np.mean(rmse)}")
+    print(f"{mod_name}_reduced_{alpha} Classification Error Rate {np.sort(er)}")
