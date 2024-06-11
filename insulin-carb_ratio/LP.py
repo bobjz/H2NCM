@@ -28,14 +28,14 @@ perms=np.zeros((repeats,cases.shape[0]),dtype='int32')
 for i in range(repeats):
     perms[i]=rng.permutation(cases.shape[0])
 
-
+mod_name="LP_OOD"
 beta=1e4
 #tune hyperparam
 for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
     best_param_list=[]
-    for repeat in range(1): #change to 3 for alpha=1
+    for repeat in range(3): 
         for test_split in range(6):
             seed=2023+repeat
             num_hidden_layers=[2,3,4]
@@ -65,13 +65,13 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
                                                                  train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
             model=DTD_LSTM(latent_size=int(best_param[2]),mlp_size=int(best_param[1]),num_hidden_layer=int(best_param[0]))
             train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=100,lr=2*1e-3,\
-                                             device=device, verbose=True, path=f"LP_{alpha}_{repeat}_{test_split}.pth")
+                                             device=device, verbose=True, path=f"{mod_name}_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"LP_a{alpha}_pred.npy",rmse)
-    np.save(f"LP_a{alpha}_causal.npy",er)
-    np.save(f"LP_a{alpha}_best_params.npy",best_param_list)
-    print(f"LP_{alpha} RMSE {np.mean(rmse)}")
-    print(f"LP_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"{mod_name}_a{alpha}_pred.npy",rmse)
+    np.save(f"{mod_name}_a{alpha}_causal.npy",er)
+    np.save(f"{mod_name}_a{alpha}_best_params.npy",best_param_list)
+    print(f"{mod_name}_{alpha} RMSE {np.mean(rmse)}")
+    print(f"{mod_name}_{alpha} Classification Error Rate {np.sort(er)}")
