@@ -11,7 +11,7 @@ class UVASimCell(nn.Module):
     def __init__(self,  input_size=4, param_size=53):
         super(UVASimCell, self).__init__()
        
-        self.K=nn.Parameter(torch.randn(param_size))
+        self.K=nn.Parameter(torch.randn(param_size)/20)
         
     def forward(self,inputs,hidden):
         #basal_insulin_data,bolus_c_data,bolus_t_data,\
