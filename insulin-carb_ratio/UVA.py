@@ -29,9 +29,8 @@ perms=np.zeros((repeats,cases.shape[0]),dtype='int32')
 for i in range(repeats):
     perms[i]=rng.permutation(cases.shape[0])
 
-
+mod_name="UVA_OOD"
 beta=1e4
-#tune hyperparam
 for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
     rmse=[]
     er=[]
@@ -43,14 +42,14 @@ for alpha in [0,1e-4,1e-3,1e-2,1e-1,1]:
             train,val,test,train_mean,train_std=cv_split2(perms,cases,ranks,repeat,test_split,3,batch_size=72,\
                                                                  train_intervention="insulin_carb", test_intervention="ins_carb_ratio")
             model=UVA_LSTM()
-            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=1*1e-2,\
-                                             device=device,path=f"UVA_{alpha}_{repeat}_{test_split}.pth")
+            train_h,val_h,test_h=train_model(model,alpha,beta,train,val,test,epochs=150,lr=1*1e-1,\
+                                             device=device,path=f"{mod_name}_{alpha}_{repeat}_{test_split}.pth")
             print(f"repeat {repeat} test_split {test_split} pred{train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0])} causal{test_h[np.argmin(val_h)][1]}")
             rmse.append(train_std[0]*np.sqrt(test_h[np.argmin(val_h)][0]))
             er.append(test_h[np.argmin(val_h)][1])
 
-    np.save(f"UVA_a{alpha}_pred.npy",rmse)
-    np.save(f"UVA_a{alpha}_causal.npy",er)
-    np.save(f"UVA_a{alpha}_best_params.npy",best_param_list)
-    print(f"UVA_{alpha} RMSE {np.mean(rmse)}")
-    print(f"UVA_{alpha} Classification Error Rate {np.sort(er)}")
+    np.save(f"{mod_name}_a{alpha}_pred.npy",rmse)
+    np.save(f"{mod_name}_a{alpha}_causal.npy",er)
+    np.save(f"{mod_name}_a{alpha}_best_params.npy",best_param_list)
+    print(f"{mod_name}_{alpha} RMSE {np.mean(rmse)}")
+    print(f"{mod_name}_{alpha} Classification Error Rate {np.sort(er)}")
